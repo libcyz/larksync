@@ -6,15 +6,16 @@
 
 larksync 需要 Python 3.10 或更高版本。
 
-larksync 还没有发布到 PyPI。使用以下方法之一安装：
+```bash
+pip install larksync
+# 或
+uv add larksync
+```
+
+安装 GitHub 上的最新代码：
 
 ```bash
-# 本机，larksync 源码在相邻目录
-uv add --editable ../larksync
-
-# 源码推送到 git 仓库后
-uv add "larksync @ git+https://<仓库地址>/larksync.git"
-pip install "git+https://<仓库地址>/larksync.git"
+pip install "git+https://github.com/libcyz/larksync.git"
 ```
 
 默认安装不包含 GUI 依赖。

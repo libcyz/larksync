@@ -1,13 +1,35 @@
 [project]
 name = "larksync"
 version = "0.1.0"
-description = "飞书电子表格 / 多维表格的拉取与按主键更新"
+description = "飞书电子表格 / 多维表格的拉取与按主键更新（Feishu / Lark sheets & bitable sync）"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "libcyz", email = "2840424020@qq.com" }]
 requires-python = ">=3.10"
+keywords = ["feishu", "lark", "bitable", "spreadsheet", "csv", "xlsx", "sync"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Natural Language :: Chinese (Simplified)",
+    "Topic :: Office/Business",
+    "Intended Audience :: Developers",
+]
 dependencies = [
     "httpx>=0.27",
     "openpyxl>=3.1.5",
     "platformdirs>=4",
 ]
+
+[project.urls]
+Homepage = "https://github.com/libcyz/larksync"
+Documentation = "https://github.com/libcyz/larksync/blob/main/docs/python.md"
+Issues = "https://github.com/libcyz/larksync/issues"
 
 [project.optional-dependencies]
 gui = [
@@ -18,5 +40,9 @@ gui = [
 dev = ["pytest>=8"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
+
+# 源码包只放库本身、测试和文档；GUI 另外打安装包，不进 PyPI
+[tool.hatch.build.targets.sdist]
+include = ["src/larksync", "tests", "docs", "README.md", "LICENSE"]
