@@ -1,0 +1,82 @@
+# 测试核心库，并在 Windows / macOS 上打包 GUI。
+# 推送 v* 标签（如 v0.1.0）时，把安装包附加到 GitHub Release。
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked
+      - run: uv run pytest -q
+
+  gui:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: larksync-windows.zip
+          - os: macos-latest   # Apple 芯片（arm64）
+            asset: larksync-macos.zip
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: gui/frontend/package-lock.json
+      - name: 构建前端
+        working-directory: gui/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --locked --extra gui
+
+      - name: PyInstaller 打包
+        run: >
+          uv run --with pyinstaller pyinstaller gui/app.py
+          --name larksync --windowed --noconfirm
+          --add-data "gui/frontend/dist:frontend/dist"
+
+      - name: 压缩（Windows）
+        if: runner.os == 'Windows'
+        run: 7z a "${{ matrix.asset }}" ./dist/larksync
+      - name: 压缩（macOS）
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent dist/larksync.app "${{ matrix.asset }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: gui
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: larksync-*.zip

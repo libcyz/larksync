@@ -23,48 +23,13 @@ GUI 和 Python 代码使用同一套规则。
 {
   "scopes": {
     "tenant": [
-      "aily:knowledge:read",
-      "base:record:retrieve",
       "bitable:app",
-      "bitable:app:readonly",
-      "docs:document.media:download",
-      "drive:drive.metadata:readonly",
-      "drive:drive:version",
-      "drive:drive:version:readonly",
-      "im:message",
-      "im:message.group_at_msg.include_bot:readonly",
-      "im:message.group_at_msg:readonly",
-      "im:message.p2p_msg:readonly",
-      "im:message.pins:read",
-      "im:message.reactions:read",
-      "im:message:readonly",
-      "im:message:recall",
-      "im:message:send_as_bot",
-      "im:message:update",
-      "im:resource",
       "sheets:spreadsheet",
-      "sheets:spreadsheet.meta:read",
-      "sheets:spreadsheet.meta:write_only",
-      "sheets:spreadsheet:create",
-      "sheets:spreadsheet:read",
-      "sheets:spreadsheet:readonly",
-      "sheets:spreadsheet:write_only",
-      "wiki:wiki",
       "wiki:wiki:readonly"
     ],
     "user": [
-      "aily:knowledge:read",
-      "base:record:retrieve",
       "bitable:app",
-      "bitable:app:readonly",
       "sheets:spreadsheet",
-      "sheets:spreadsheet.meta:read",
-      "sheets:spreadsheet.meta:write_only",
-      "sheets:spreadsheet:create",
-      "sheets:spreadsheet:read",
-      "sheets:spreadsheet:readonly",
-      "sheets:spreadsheet:write_only",
-      "wiki:wiki",
       "wiki:wiki:readonly"
     ]
   }
@@ -115,4 +80,4 @@ GUI 和 Python 代码使用同一套规则。
 - 单击「移除」：删除本机的表格配置。飞书上的在线表和写入记录不变。
 - 单击右上角的用户名：修改 App ID 或 App Secret，或退出登录。
 
-开发者调用详见docs/python.md
+开发者调用详见 [docs/python.md](https://github.com/libcyz/larksync/blob/main/docs/python.md)。

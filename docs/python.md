@@ -1,171 +1,108 @@
 # Python 调用
 
-本文说明技术人员在 Python 代码中调用 larksync 的方法。术语和更新规则见 [README](../README.md)。
+术语和更新规则见 [README](../README.md)。
 
 ## 安装
 
-larksync 需要 Python 3.10 或更高版本。
-
 ```bash
-pip install larksync
-# 或
-uv add larksync
+pip install larksync      # 需要 Python 3.10+
 ```
 
-安装 GitHub 上的最新代码：
-
-```bash
-pip install "git+https://github.com/libcyz/larksync.git"
-```
-
-默认安装不包含 GUI 依赖。
-
-## 配置凭证
-
-有浏览器的机器上，运行一次：
+## 快速开始
 
 ```python
 import larksync
-larksync.configure("cli_xxx", "app_secret")
+from larksync import Table
+
+larksync.configure("cli_xxx", "app_secret")    # 每台机器运行一次
+
+t = Table("https://xxx.feishu.cn/wiki/<token>?sheet=<id>")
+
+rows = t.pull("out.csv")         # 拉取：返回 list[dict]，同时写入 CSV
+
+plan = t.diff("new.csv", key="ID")
+print(plan)                      # 补空 12 格 / 新增 3 行 / 不一致 2 格（未写入）/ 未匹配 5 行
+record_id = plan.apply()         # 写入
+
+t.undo(record_id)                # 撤销这次写入
 ```
 
-服务器上，设置环境变量。环境变量优先于 `configure()` 的配置。
+首次运行时打开浏览器授权。之后 larksync 自动续期。
+
+## API
+
+| 调用 | 说明 |
+|---|---|
+| `Table(url, auth="user", tab=None)` | 打开在线表。支持 `/wiki/`、`/sheets/`、`/base/` 链接 |
+| `t.pull(path=None)` | 拉取全部行，返回 `list[dict]`。传 `path` 时同时写入 CSV |
+| `t.columns()` | 表头 |
+| `t.tabs()` | 文档中的全部在线表：`[(id, 标题)]` |
+| `t.title` | 文档标题 |
+| `t.diff(source, key, columns=None)` | 和本地数据比较，返回 `Plan` |
+| `plan.apply()` | 写入，返回写入记录 id |
+| `t.undo(record_id)` | 撤销一次写入 |
+| `t.init(source)` | 用本地文件初始化空的在线表 |
+
+- `tab`：指定在线表 id。不写时，用链接中的 `?sheet=` / `?table=`；链接也没有时，用第一张在线表。
+- `source`：CSV 或 xlsx 的路径、文件内容 `bytes`，或 `list[dict]`。CSV 可以是 UTF-8 或 GBK。
+- `key`：主键。联合主键写成列表：`key=["歌曲名", "歌手名"]`。
+- `columns`：要更新的字段。不写时，更新本地数据中全部非主键列。
+
+### Plan
+
+| 属性 | 内容 | `apply()` 时 |
+|---|---|---|
+| `plan.changed` | 补空的格子 | 写入 |
+| `plan.conflicts` | 不一致的格子 | 不写入 |
+| `plan.added` | 新增的行 | 写入 |
+| `plan.unmatched` | 未匹配的行数 | — |
+
+`apply()` 前可以修改 `plan`：
+
+```python
+plan.changed += plan.conflicts   # 确认后，覆盖不一致的格子
+plan.added = []                  # 不新增行
+plan.apply()
+```
+
+## 在服务器上运行
+
+服务器没有浏览器。用 tenant 身份，凭证放在环境变量中：
 
 ```bash
 export LARKSYNC_APP_ID=cli_xxx
 export LARKSYNC_APP_SECRET=xxx
 ```
 
-## 选择身份
-
-| 身份 | 写法 | 可以访问的在线表 | 适用场景 |
-|---|---|---|---|
-| user | `Table(url)` | 登录人可以打开的在线表 | 开发机、偶尔运行的 pipeline |
-| tenant | `Table(url, auth="tenant")` | 应用是协作者的在线表 | 无人值守的服务器 |
-
-user 身份首次使用时打开浏览器授权。之后 larksync 自动续期。
-
-服务器上使用 user 身份时，在有浏览器的机器上登录一次。然后把 `config.json` 和 `token.json` 复制到服务器的配置目录。长时间不运行时，登录会过期，必须重新登录。
-
-tenant 身份必须把应用加为每张在线表的协作者。
-
-## 拉取在线表
-
 ```python
-from larksync import Table
-
-t = Table("https://xxx.feishu.cn/wiki/<token>?sheet=<id>")
-rows = t.pull()            # list[dict]，表头作为 key
-t.pull("out.csv")          # 同时写入 CSV 文件
+Table(url, auth="tenant").pull("out.csv")
 ```
 
-- 链接带 `?sheet=` 或 `?table=` 时，larksync 打开指定的在线表。
-- 链接不带参数时，larksync 打开文档中的第一张在线表。
-- `Table(url, tab="<id>")` 指定在线表，优先于链接中的参数。
-- 输出的 CSV 用 `utf-8-sig` 编码。Excel 可以直接打开。
-- 表头为空的列和整行为空的行不输出。
+- tenant 身份必须把应用加为在线表的协作者。
+- 要用 user 身份：在有浏览器的机器上登录一次，把配置目录中的 `config.json` 和 `token.json` 复制到服务器。
 
-## 查看文档结构
-
-```python
-t.title       # 文档标题
-t.tabs()      # [(id, 标题)]：文档中的全部在线表
-t.columns()   # 表头。只读取表头，不读取数据
-```
-
-## 更新在线表
-
-```python
-plan = t.diff("new.csv", key="Person_ID", columns=["状态", "备注"])
-print(plan)        # 补空 12 格 / 新增 3 行 / 不一致 2 格（未写入）/ 未匹配 5 行
-
-plan.changed       # 补空的格子：list[Change(key, column, old, new)]
-plan.conflicts     # 不一致的格子：默认不写入
-plan.added         # 新增的行：list[dict]
-plan.unmatched     # 未匹配的行数：int
-
-record_id = plan.apply()   # 写入 plan.changed 和 plan.added
-```
-
-`diff()` 的参数：
-
-- `source`：CSV 路径、xlsx 路径、文件内容 `bytes`，或 `list[dict]`。
-- `key`：主键。联合主键写成列表，例：`key=["歌曲名", "歌手名"]`。
-- `columns`：要更新的字段。不写时，比较本地文件中全部非主键列。
-
-`apply()` 前可以修改 `plan`：
-
-```python
-plan.changed += plan.conflicts   # 人工确认后，覆盖全部不一致的格子
-plan.added = []                  # 不增加新行
-plan.apply()
-```
-
-写入记录保存在配置目录的 `history/` 中。
-
-## 撤销
-
-```python
-t.undo(record_id)
-```
-
-- 改过的格子恢复原值。本次写入新增的行被删除。
-- 写入后有人又修改了这些格子时，撤销整体中止。
-
-## 初始化空的在线表
-
-```python
-t.init("first.csv")
-```
-
-- 在线表必须没有数据。
-- 本地文件中有、在线表中没有的列，larksync 增加为字段。多维表格中增加的字段是文本类型。
-- `init()` 返回写入记录 id。可以用 `undo()` 撤销。
-
-## 错误处理
-
-larksync 只抛出一种异常：`LarkError`。错误信息说明原因和处理方法。
-
-```python
-from larksync import LarkError
-
-try:
-    Table(url).pull("out.csv")
-except LarkError as e:
-    print(e)
-```
-
-## 示例：pipeline 中拉取登记表
+## 示例：pipeline 中批量拉取
 
 ```python
 from larksync import LarkError, Table
 
 URLS = {
-    "供应商A - 人员登记": "https://xxx.feishu.cn/wiki/<token>?sheet=<id>",
-    "供应商A - 组别登记": "https://xxx.feishu.cn/wiki/<token>?sheet=<id>",
+    "人员登记": "https://xxx.feishu.cn/wiki/<token>?sheet=<id>",
+    "组别登记": "https://xxx.feishu.cn/wiki/<token>?sheet=<id>",
 }
 
 for name, url in URLS.items():
     try:
         rows = Table(url, auth="tenant").pull(f"csv/{name}.csv")
         print(f"{name}：{len(rows)} 行")
-    except LarkError as e:
+    except LarkError as e:       # larksync 只抛出这一种异常，错误信息包含处理方法
         print(f"{name} 拉取失败：{e}")
 ```
 
 ## 配置目录
 
-| 系统 | 位置 |
-|---|---|
-| Linux | `~/.config/larksync/` |
-| macOS | `~/Library/Application Support/larksync/` |
-| Windows | `%LOCALAPPDATA%\larksync\` |
+- Linux：`~/.config/larksync/`
+- macOS：`~/Library/Application Support/larksync/`
+- Windows：`%LOCALAPPDATA%\larksync\`
 
-| 文件 | 内容 |
-|---|---|
-| `config.json` | App ID、App Secret、回调端口 |
-| `token.json` | 登录状态。更换 App ID 后自动作废 |
-| `history/` | 写入记录 |
-| `tables/` | GUI 的表格配置。一张在线表一个文件 |
-
-`config.json` 和 `token.json` 包含凭证。不得提交到 git 仓库，不得发给他人。
+目录中有 `config.json`（应用凭证）、`token.json`（登录状态）和 `history/`（写入记录）。`config.json` 和 `token.json` 不得提交到 git 仓库。
