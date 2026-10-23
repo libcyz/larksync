@@ -7,6 +7,7 @@ import AddTableModal from './AddTableModal.vue'
 import Workspace from './Workspace.vue'
 
 const message = useMessage()
+const logo = import.meta.env.BASE_URL + 'favicon.png'
 const state = ref({ configured: false, user: null })
 const tables = ref([])
 const currentId = ref(null)
@@ -49,7 +50,7 @@ onMounted(() => load().catch((e) => message.error(e.message)))
 <template>
   <n-layout has-sider position="absolute">
     <n-layout-sider bordered :width="220" content-style="display:flex;flex-direction:column;height:100%">
-      <div class="brand">larksync</div>
+      <div class="brand"><img :src="logo" alt="" />larksync</div>
       <n-menu :options="menu" :value="currentId" @update:value="(v) => (currentId = v)" class="menu" />
       <div class="sider-foot">
         <n-button block dashed @click="showAdd = true" :disabled="!state.user">+ 添加表格</n-button>
@@ -90,7 +91,8 @@ onMounted(() => load().catch((e) => message.error(e.message)))
 </template>
 
 <style scoped>
-.brand { font-weight: 600; font-size: 16px; padding: 16px 20px 8px; letter-spacing: .5px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 16px; padding: 16px 20px 8px; letter-spacing: .5px; }
+.brand img { width: 22px; height: 22px; }
 .menu { flex: 1; overflow: auto; }
 .sider-foot { padding: 12px; }
 .topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px;

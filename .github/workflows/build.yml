@@ -26,8 +26,10 @@ jobs:
         include:
           - os: windows-latest
             asset: larksync-windows.zip
+            icon: gui/icon/icon.ico
           - os: macos-latest   # Apple 芯片（arm64）
             asset: larksync-macos.zip
+            icon: gui/icon/icon.icns
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -52,7 +54,7 @@ jobs:
       - name: PyInstaller 打包
         run: >
           uv run --with pyinstaller pyinstaller gui/app.py
-          --name larksync --windowed --noconfirm
+          --name larksync --windowed --noconfirm --icon "${{ matrix.icon }}"
           --add-data "gui/frontend/dist:frontend/dist"
 
       - name: 压缩（Windows）
