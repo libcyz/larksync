@@ -1,0 +1,29 @@
+# Python
+.venv/
+.venv-gtk/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# 前端（gui/frontend/.gitignore 另外忽略 node_modules/ 和 dist/）
+gui/frontend/node_modules/
+gui/frontend/dist/
+
+# 凭证：larksync 默认存在用户配置目录，这里防止误放进仓库
+token.json
+.feishu_token.json
+
+# 测试时拉取到项目根目录的表格
+/*.csv
+/*.xlsx
+
+# 编辑器
+*~
+\#*\#
+.#*
+.idea/
+.vscode/
+.DS_Store
