@@ -116,4 +116,7 @@ GUI 和 Python 代码使用同一套规则。
 - 单击「移除」：删除本机的表格配置。飞书上的在线表和写入记录不变。
 - 单击右上角的用户名：修改 App ID 或 App Secret，或退出登录。
 
+### 注意
+	如果你的windows开着防火墙，windows可能会把这个组件标记成不安全，选择“属性”--“解除锁定” 再重新解压即可。
+	
 开发者调用详见 [docs/python.md](https://github.com/libcyz/larksync/blob/main/docs/python.md)。
