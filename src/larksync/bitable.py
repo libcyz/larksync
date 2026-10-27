@@ -82,14 +82,16 @@ class Bitable:
                     params={"page_size": 1}, json={})["data"].get("total", 0)
 
     def fetch(self, refs):
-        """只读指定的记录：{record_id: 记录}，已删除的不在结果里。"""
+        """只读指定的记录：{record_id: 记录}，已删除的不在结果里。每批 100 条、并发 5 个。"""
         self.columns()
-        out = {}
-        for i in range(0, len(refs), 100):
-            data = self._post("/records/batch_get", {"record_ids": refs[i:i + 100]})
-            for it in data.get("records") or []:
-                out[it["record_id"]] = self._row(it.get("fields") or {})
-        return out
+
+        def get(chunk):
+            return self._post("/records/batch_get", {"record_ids": chunk}).get("records") or []
+
+        chunks = [refs[i:i + 100] for i in range(0, len(refs), 100)]
+        with ThreadPoolExecutor(_WORKERS) as pool:
+            return {it["record_id"]: self._row(it.get("fields") or {})
+                    for part in pool.map(get, chunks) for it in part}
 
     def writable(self, name):
         return self._fields.get(name) in _WRITABLE
