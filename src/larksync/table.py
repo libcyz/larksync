@@ -11,6 +11,7 @@ from .http import LarkError, call
 from .sheets import Sheets
 
 _DENIED = {91403, 131006, 1254302}
+_PROGRESS_STEP = 1000   # 每写这么多格回调一次进度
 _MISSING_SCOPE = {99991672, 99991679}
 
 
@@ -104,14 +105,18 @@ class Table:
             self._write(rec, [], added)
         return rec["id"]
 
-    def undo(self, record_id):
-        """撤销一次写入：还原改过的格子、删掉新增的行。之后又被别人改过的话整体中止。"""
+    def undo(self, record_id, progress=None):
+        """撤销一次写入：还原改过的格子、删掉新增的行。之后又被别人改过的话整体中止。
+
+        progress(阶段, 已完成, 总数)：可选的进度回调，阶段是「检查」或「撤销」。
+        """
         rec = history.load(record_id)
         if rec["target"] != self._backend.target:
             raise LarkError(f"写入记录 {record_id} 不属于这张表（它属于 {rec['url']}）")
         if rec["status"] == "undone":
             raise LarkError(f"写入记录 {record_id} 已经撤销过了")
         with self._explained():
+            _report(progress, "检查", 0, len(rec["changed"]) + len(rec["created"]))
             current = self._backend.fetch([ch["ref"] for ch in rec["changed"]] + rec["created"])
             conflicts, cells, drop = [], [], []
             for ch in rec["changed"]:
@@ -131,13 +136,18 @@ class Table:
                     drop.append(ref)
             if conflicts:
                 raise LarkError("撤销会覆盖别人之后的修改，已中止：\n" + brief(conflicts))
-            self._backend.update(cells)
+            total = len(cells) + len(drop)
+            for i in range(0, len(cells), _PROGRESS_STEP):
+                self._backend.update(cells[i:i + _PROGRESS_STEP])
+                _report(progress, "撤销", min(i + _PROGRESS_STEP, len(cells)), total)
             self._backend.delete(drop)
+            _report(progress, "撤销", total, total)
         rec["status"] = "undone"
         history.save(rec)
 
-    def _apply(self, plan):
+    def _apply(self, plan, progress=None):
         with self._explained():
+            _report(progress, "检查", 0, len(plan.changed) + len(plan.added))
             current = self._backend.fetch([ch.ref for ch in plan.changed])   # 只读涉及的行
             taken = {}
             if plan.added:   # 确认新增的主键没被别人抢先加上
@@ -158,14 +168,20 @@ class Table:
                 raise LarkError("在线表在 diff 之后被改过，已中止写入，请重新 diff：\n"
                                 + brief(conflicts))
             rec = history.new(self.url, self._backend.target, plan.key, plan.changed, plan.added)
-            self._write(rec, cells, plan.added)
+            self._write(rec, cells, plan.added, progress)
         return rec["id"]
 
-    def _write(self, rec, cells, added):
-        self._backend.update(cells)
+    def _write(self, rec, cells, added, progress=None):
+        total = len(cells) + len(added)
+        for i in range(0, len(cells), _PROGRESS_STEP):
+            self._backend.update(cells[i:i + _PROGRESS_STEP])
+            _report(progress, "写入", min(i + _PROGRESS_STEP, len(cells)), total)
         for refs in self._backend.create(added):
+            if not refs:
+                continue
             rec["created"] += refs
             history.save(rec)   # 每批落盘，中途失败也能撤销已写入的部分
+            _report(progress, "写入", len(cells) + len(rec["created"]), total)
         rec["status"] = "done"
         history.save(rec)
 
@@ -197,6 +213,11 @@ class Table:
                 raise LarkError(f"应用缺少权限：请在飞书开发者后台开通 {SCOPES} 并发布，"
                                 f"然后重新登录", e.code) from e
             raise
+
+
+def _report(progress, stage, done, total):
+    if progress:
+        progress(stage, done, total)
 
 
 def _cell(row, key_cols, key, column):

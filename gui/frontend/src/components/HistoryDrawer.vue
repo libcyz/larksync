@@ -1,7 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import { NDrawer, NDrawerContent, NList, NListItem, NTag, NButton, NPopconfirm, NEmpty, NSpace, NText, useMessage } from 'naive-ui'
-import { call } from '../api.js'
+import { call, progress } from '../api.js'
 
 const props = defineProps({ show: Boolean, table: Object })
 const emit = defineEmits(['update:show'])
@@ -21,6 +21,7 @@ async function load() {
 
 async function undo(id) {
   busy.value = id
+  progress.value = null
   try {
     await call('undo', { table_id: props.table.id, record_id: id })
     message.success('已撤销')
@@ -53,7 +54,9 @@ watch(() => props.show, (v) => v && load())
           <template #suffix>
             <n-popconfirm v-if="r.status !== 'undone'" @positive-click="undo(r.id)">
               <template #trigger>
-                <n-button size="small" :loading="busy === r.id">撤销</n-button>
+                <n-button size="small" :loading="busy === r.id">
+                  {{ busy === r.id && progress ? `${progress.stage}中 ${progress.done} / ${progress.total}` : '撤销' }}
+                </n-button>
               </template>
               还原这次改过的格子、删除这次新增的行。之后又被别人改过的话会中止。
             </n-popconfirm>

@@ -190,7 +190,7 @@ class Api:
         _, plan = self._plan
         plan.changed = [plan.changed[i] for i in changed] + [plan.conflicts[i] for i in conflicts]
         plan.added = [plan.added[i] for i in added]
-        record = plan.apply()
+        record = plan.apply(progress=self._progress)
         self._plan = None
         return {"record_id": record}
 
@@ -209,8 +209,14 @@ class Api:
 
     @guard
     def undo(self, table_id, record_id):
-        self._table(_profile(table_id)).undo(record_id)
+        self._table(_profile(table_id)).undo(record_id, progress=self._progress)
         return {}
+
+    def _progress(self, stage, done, total):
+        """把写入 / 撤销进度推给前端（window.larksyncProgress）。"""
+        if self._window:
+            msg = json.dumps({"stage": stage, "done": done, "total": total}, ensure_ascii=False)
+            self._window.evaluate_js(f"window.larksyncProgress && window.larksyncProgress({msg})")
 
     def _table(self, profile):
         if profile["id"] not in self._tables:

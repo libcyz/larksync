@@ -36,9 +36,12 @@ class Plan:
         return (f"补空 {len(self.changed)} 格 / 新增 {len(self.added)} 行 / "
                 f"不一致 {len(self.conflicts)} 格（未写入）/ 未匹配 {self.unmatched} 行")
 
-    def apply(self):
-        """写入飞书，返回写入记录 id（用于 Table.undo）。"""
-        return self._table._apply(self)
+    def apply(self, progress=None):
+        """写入飞书，返回写入记录 id（用于 Table.undo）。
+
+        progress(阶段, 已完成, 总数)：可选的进度回调，阶段是「检查」或「写入」。
+        """
+        return self._table._apply(self, progress)
 
 
 def load(source):

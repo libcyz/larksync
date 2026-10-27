@@ -1,5 +1,10 @@
 // 前端调用 Python 的唯一入口：打包后走 pywebview 桥，浏览器开发时走 mock
+import { ref } from 'vue'
 import { mock } from './mock.js'
+
+// 写入 / 撤销的进度 { stage, done, total }：Python 通过 window.larksyncProgress 推过来
+export const progress = ref(null)
+window.larksyncProgress = (p) => { progress.value = p }
 
 // 打包后的桌面应用里为 true：选文件、拖入文件走 Python（能拿到真实路径）
 export const native = !import.meta.env.DEV

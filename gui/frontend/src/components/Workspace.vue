@@ -1,7 +1,7 @@
 <script setup>
 import { computed, h, onMounted, onUnmounted, ref, watch } from 'vue'
 import { NCard, NButton, NSelect, NCheckbox, NDataTable, NTabs, NTabPane, NTag, NAlert, NSpace, NText, useMessage, useDialog } from 'naive-ui'
-import { call, fileToBase64, native } from '../api.js'
+import { call, fileToBase64, native, progress } from '../api.js'
 import ColumnTags from './ColumnTags.vue'
 import HistoryDrawer from './HistoryDrawer.vue'
 
@@ -181,6 +181,7 @@ function confirmApply() {
 
 async function apply() {
   loading.value = 'apply'
+  progress.value = null
   try {
     await call('apply', sel.value)
     message.success('已写入飞书，可在「历史」里撤销')
@@ -272,7 +273,8 @@ async function apply() {
       </n-tabs>
       <n-space justify="end" style="margin-top: 12px">
         <n-button type="primary" :disabled="!total" :loading="loading === 'apply'" @click="confirmApply">
-          写入飞书（{{ total }}）
+          <template v-if="loading === 'apply' && progress">{{ progress.stage }}中 {{ progress.done }} / {{ progress.total }}</template>
+          <template v-else>写入飞书（{{ total }}）</template>
         </n-button>
       </n-space>
     </n-card>

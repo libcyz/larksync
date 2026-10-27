@@ -153,3 +153,14 @@ def test_diff_validation():
         t.diff([{"ID": "1", "状态": "b"}, {"ID": "1", "状态": "c"}], key="ID")
     with pytest.raises(LarkError, match="主键为空"):
         t.diff([{"ID": "", "状态": "b"}], key="ID")
+
+
+def test_progress_callback():
+    t = table(["ID", "状态"], [{"ID": str(i), "状态": ""} for i in range(2500)])
+    plan = t.diff([{"ID": str(i), "状态": "x"} for i in range(2500)], key="ID")
+    seen = []
+    rid = plan.apply(progress=lambda stage, done, total: seen.append((stage, done, total)))
+    assert seen == [("检查", 0, 2500), ("写入", 1000, 2500), ("写入", 2000, 2500), ("写入", 2500, 2500)]
+    seen.clear()
+    t.undo(rid, progress=lambda *a: seen.append(a))
+    assert seen[0] == ("检查", 0, 2500) and seen[-1] == ("撤销", 2500, 2500)

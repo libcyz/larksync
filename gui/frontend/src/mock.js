@@ -1,5 +1,14 @@
 // 浏览器开发用的假后端：接口和 gui/app.py 的 Api 一一对应
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+// 模拟 Python 推送进度
+async function fakeProgress(stage, total) {
+  window.larksyncProgress?.({ stage: '检查', done: 0, total })
+  await sleep(500)
+  for (let done = 1; done <= total; done++) {
+    window.larksyncProgress?.({ stage, done, total })
+    await sleep(300)
+  }
+}
 const copy = (x) => JSON.parse(JSON.stringify(x))   // 和真实后端一样返回副本，界面改了不影响这里
 
 const db = {
@@ -113,7 +122,7 @@ export const mock = {
     return { changed, conflicts, added, unmatched: db.rows[table_id].length - seen }
   },
   async apply({ changed, conflicts, added }) {
-    await sleep(700)
+    await fakeProgress('写入', changed.length + conflicts.length + added.length)
     const p = db.plan
     const cells = [...changed.map((i) => p.changed[i]), ...conflicts.map((i) => p.conflicts[i])]
     const rows = db.rows[p.table_id]
@@ -131,7 +140,7 @@ export const mock = {
     return copy(db.history.filter((h) => h.table_id === table_id))
   },
   async undo({ record_id }) {
-    await sleep(700)
+    await fakeProgress('撤销', 3)
     const h = db.history.find((x) => x.id === record_id)
     const t = db.tables.find((x) => x.id === h.table_id)
     const rows = db.rows[h.table_id]
