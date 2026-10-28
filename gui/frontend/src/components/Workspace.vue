@@ -94,7 +94,8 @@ const dupes = computed(() => {
   const used = cols.value.filter((r) => r.field && (r.use || r.key)).map((r) => r.field)
   return [...new Set(used.filter((v, i) => used.indexOf(v) !== i))]
 })
-const canDiff = computed(() => csv.value && keys.value.length && updating.value.length && !dupes.value.length)
+// 只勾主键、不勾「更新」也可以：这时只找新增的行
+const canDiff = computed(() => csv.value && keys.value.length && !dupes.value.length)
 
 watch(cols, () => { plan.value = null }, { deep: true })
 
@@ -227,7 +228,7 @@ async function apply() {
         <n-text :type="dupes.length ? 'error' : 'default'" depth="3">
           <template v-if="dupes.length">多个 CSV 列对应到了同一个字段：{{ dupes.join('、') }}</template>
           <template v-else-if="!keys.length">请勾选主键（用来匹配在线表里的行，一列不唯一时可以多勾几列）</template>
-          <template v-else-if="!updating.length">请勾选要更新的列</template>
+          <template v-else-if="!updating.length">按「{{ keys.join(' + ') }}」匹配，只找新增的行（新行只写主键）</template>
           <template v-else>按「{{ keys.join(' + ') }}」匹配，更新 {{ updating.length }} 个字段</template>
         </n-text>
         <n-button type="primary" :disabled="!canDiff" :loading="loading === 'diff'" @click="runDiff">
